@@ -98,7 +98,6 @@ class MsReportStock(models.TransientModel):
                 product_category categ on categ.id=prod_tmpl.categ_id
             WHERE 
                 quant.quantity<=quant.stock_min
-                %s and %s
             GROUP BY 
                 product, prod_categ, location, date_in
             ORDER BY 
