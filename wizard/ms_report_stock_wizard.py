@@ -104,7 +104,8 @@ class MsReportStock(models.TransientModel):
                 date_in
         """
         
-        self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
+        #self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
+        self._cr.execute(query)
         result = self._cr.fetchall()
         
         fp = BytesIO()
