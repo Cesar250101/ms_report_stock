@@ -98,14 +98,14 @@ class MsReportStock(models.TransientModel):
                 product_category categ on categ.id=prod_tmpl.categ_id
             WHERE 
                 quant.quantity<=quant.stock_min
+                %s and %s
             GROUP BY 
                 product, prod_categ, location, date_in
             ORDER BY 
                 date_in
         """
         
-        #self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
-        self._cr.execute(query)
+        self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
         result = self._cr.fetchall()
         
         fp = BytesIO()
