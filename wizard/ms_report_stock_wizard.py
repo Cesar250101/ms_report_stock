@@ -85,7 +85,7 @@ class MsReportStock(models.TransientModel):
                 sum(quant.quantity) as total_product, 
                 sum(quant.quantity-quant.reserved_quantity) as stock, 
                 sum(quant.reserved_quantity) as reserved,
-                sum(quant.stock_min) as stockmin,
+                sum(quant.stock_min) as stockmin
             FROM 
                 stock_quant quant
             LEFT JOIN 
@@ -104,8 +104,7 @@ class MsReportStock(models.TransientModel):
                 date_in
         """
         
-        # self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
-        self._cr.execute(query)
+        self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
         result = self._cr.fetchall()
         
         fp = BytesIO()
