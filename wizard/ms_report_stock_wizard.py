@@ -101,7 +101,8 @@ class MsReportStock(models.TransientModel):
                 LEFT JOIN 
                     product_category categ on categ.id=prod_tmpl.categ_id
                 WHERE 
-                    quant.quantity<=quant.stock_min
+                    quant.quantity<=quant.stock_min and
+                    %s and %s
                 GROUP BY 
                     product, prod_categ, location, date_in
                 ORDER BY 
