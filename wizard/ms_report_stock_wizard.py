@@ -33,11 +33,10 @@ class MsReportStock(models.TransientModel):
         location_ids = data['location_ids']
         
         if categ_ids :
-            if self.imprime_bajo_stock:
-                product_ids = self.env['product.product'].search([('categ_id', 'in', categ_ids),('quantity','<=','stock_min')])
-            else:
-                product_ids = self.env['product.product'].search([('categ_id','in',categ_ids)])
-            product_ids = [prod.id for prod in product_ids]
+            product_ids = self.env['product.product'].search([('categ_id','in',categ_ids)])
+        if self.imprime_bajo_stock:
+            product_ids = self.env['stock.quant'].search([('quantity', '<=', 'stock_min')])
+        product_ids = [prod.id for prod in product_ids]
         where_product_ids = " 1=1 "
         where_product_ids2 = " 1=1 "
         if product_ids :
