@@ -9,11 +9,7 @@ import pytz
 class MsReportStock(models.TransientModel):
     _name = "ms.report.stock"
     _description = "Stock Report .xlsx"
-    
-    @api.model
-    def get_default_date_model(self):
-        return pytz.UTC.localize(datetime.now()).astimezone(timezone(self.env.user.tz or 'UTC'))
-    
+
     datas = fields.Binary('File', readonly=True)
     datas_fname = fields.Char('Filename', readonly=True)
     product_ids = fields.Many2many('product.product', 'ms_report_stock_product_rel', 'ms_report_stock_id',
@@ -22,7 +18,14 @@ class MsReportStock(models.TransientModel):
         'categ_id', 'Categories')
     location_ids = fields.Many2many('stock.location', 'ms_report_stock_location_rel', 'ms_report_stock_id',
         'location_id', 'Locations')
-        
+    imprime_bajo_stock = fields.Boolean(
+        string='Imprime producto bajo stock?',
+        required=False)
+
+    @api.model
+    def get_default_date_model(self):
+        return pytz.UTC.localize(datetime.now()).astimezone(timezone(self.env.user.tz or 'UTC'))
+
     def print_excel_report(self):
         data = self.read()[0]
         product_ids = data['product_ids']
@@ -30,13 +33,17 @@ class MsReportStock(models.TransientModel):
         location_ids = data['location_ids']
         
         if categ_ids :
-            product_ids = self.env['product.product'].search([('categ_id','in',categ_ids)])
+            if self.imprime_bajo_stock:
+                product_ids = self.env['product.product'].search([('categ_id', 'in', categ_ids),('quantity','<=','stock_min')])
+            else:
+                product_ids = self.env['product.product'].search([('categ_id','in',categ_ids)])
             product_ids = [prod.id for prod in product_ids]
         where_product_ids = " 1=1 "
         where_product_ids2 = " 1=1 "
         if product_ids :
             where_product_ids = " quant.product_id in %s"%str(tuple(product_ids)).replace(',)', ')')
             where_product_ids2 = " product_id in %s"%str(tuple(product_ids)).replace(',)', ')')
+
         location_ids2 = self.env['stock.location'].search([('usage','=','internal')])
         ids_location = [loc.id for loc in location_ids2]
         where_location_ids = " quant.location_id in %s"%str(tuple(ids_location)).replace(',)', ')')
@@ -47,7 +54,7 @@ class MsReportStock(models.TransientModel):
         
         datetime_string = self.get_default_date_model().strftime("%Y-%m-%d %H:%M:%S")
         date_string = self.get_default_date_model().strftime("%Y-%m-%d")
-        report_name = 'Productos Bajo Stock'
+        report_name = 'Stock Report'
         filename = '%s %s'%(report_name,date_string)
         
         columns = [
@@ -60,7 +67,7 @@ class MsReportStock(models.TransientModel):
             ('Total Stock', 20, 'float', 'float'),
             ('Available', 20, 'float', 'float'),
             ('Reserved', 20, 'float', 'float'),
-            ('Stock Mínimo', 20, 'float', 'float'),
+            ('Stock Min', 20, 'float', 'float'),
         ]
 
         datetime_format = '%Y-%m-%d %H:%M:%S'
@@ -84,8 +91,7 @@ class MsReportStock(models.TransientModel):
                 date_part('days', now() - (quant.in_date + interval '%s')) as aging,
                 sum(quant.quantity) as total_product, 
                 sum(quant.quantity-quant.reserved_quantity) as stock, 
-                sum(quant.reserved_quantity) as reserved,
-                sum(quant.stock_min) as stockmin
+                sum(quant.reserved_quantity) as reserved
             FROM 
                 stock_quant quant
             LEFT JOIN 
@@ -97,7 +103,6 @@ class MsReportStock(models.TransientModel):
             LEFT JOIN 
                 product_category categ on categ.id=prod_tmpl.categ_id
             WHERE 
-                quant.quantity<=quant.stock_min and 
                 %s and %s
             GROUP BY 
                 product, prod_categ, location, date_in
