@@ -34,8 +34,6 @@ class MsReportStock(models.TransientModel):
         
         if categ_ids :
             product_ids = self.env['product.product'].search([('categ_id','in',categ_ids)])
-        if self.imprime_bajo_stock:
-            product_ids = self.env['stock.quant'].search([('quantity', '<=', 'stock_min')])
         product_ids = [prod.id for prod in product_ids]
         where_product_ids = " 1=1 "
         where_product_ids2 = " 1=1 "
@@ -80,34 +78,63 @@ class MsReportStock(models.TransientModel):
             hours = str(hours) + ' hours'
         else :
             hours = str(hours) + ' hour'
-        
-        query = """
-            SELECT 
-                prod_tmpl.name as product, 
-                categ.name as prod_categ, 
-                loc.complete_name as location,
-                quant.in_date + interval '%s' as date_in, 
-                date_part('days', now() - (quant.in_date + interval '%s')) as aging,
-                sum(quant.quantity) as total_product, 
-                sum(quant.quantity-quant.reserved_quantity) as stock, 
-                sum(quant.reserved_quantity) as reserved
-            FROM 
-                stock_quant quant
-            LEFT JOIN 
-                stock_location loc on loc.id=quant.location_id
-            LEFT JOIN 
-                product_product prod on prod.id=quant.product_id
-            LEFT JOIN 
-                product_template prod_tmpl on prod_tmpl.id=prod.product_tmpl_id
-            LEFT JOIN 
-                product_category categ on categ.id=prod_tmpl.categ_id
-            WHERE 
-                %s and %s
-            GROUP BY 
-                product, prod_categ, location, date_in
-            ORDER BY 
-                date_in
-        """
+
+        if self.imprime_bajo_stock:
+            query = """
+                SELECT 
+                    prod_tmpl.name as product, 
+                    categ.name as prod_categ, 
+                    loc.complete_name as location,
+                    quant.in_date + interval '%s' as date_in, 
+                    date_part('days', now() - (quant.in_date + interval '%s')) as aging,
+                    sum(quant.quantity) as total_product, 
+                    sum(quant.quantity-quant.reserved_quantity) as stock, 
+                    sum(quant.reserved_quantity) as reserved
+                FROM 
+                    stock_quant quant
+                LEFT JOIN 
+                    stock_location loc on loc.id=quant.location_id
+                LEFT JOIN 
+                    product_product prod on prod.id=quant.product_id
+                LEFT JOIN 
+                    product_template prod_tmpl on prod_tmpl.id=prod.product_tmpl_id
+                LEFT JOIN 
+                    product_category categ on categ.id=prod_tmpl.categ_id
+                WHERE 
+                    quant.quantity<=quant.stock_min
+                GROUP BY 
+                    product, prod_categ, location, date_in
+                ORDER BY 
+                    date_in
+            """
+        else:
+            query = """
+                SELECT 
+                    prod_tmpl.name as product, 
+                    categ.name as prod_categ, 
+                    loc.complete_name as location,
+                    quant.in_date + interval '%s' as date_in, 
+                    date_part('days', now() - (quant.in_date + interval '%s')) as aging,
+                    sum(quant.quantity) as total_product, 
+                    sum(quant.quantity-quant.reserved_quantity) as stock, 
+                    sum(quant.reserved_quantity) as reserved
+                FROM 
+                    stock_quant quant
+                LEFT JOIN 
+                    stock_location loc on loc.id=quant.location_id
+                LEFT JOIN 
+                    product_product prod on prod.id=quant.product_id
+                LEFT JOIN 
+                    product_template prod_tmpl on prod_tmpl.id=prod.product_tmpl_id
+                LEFT JOIN 
+                    product_category categ on categ.id=prod_tmpl.categ_id
+                WHERE 
+                    %s and %s
+                GROUP BY 
+                    product, prod_categ, location, date_in
+                ORDER BY 
+                    date_in
+            """
         
         self._cr.execute(query%(hours,hours,where_product_ids,where_location_ids))
         result = self._cr.fetchall()
